@@ -2,7 +2,6 @@ from sirochatora.sirochatora import Sirochatora, MessageBasedState
 from sirochatora.rag.rag import LocalStorageRAG, RetrievalType
 from sirochatora.util.siroutil import ConfJsonLoader
 from os import environ
-from sirochatora.sirochatora import Sirochatora
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional, Any
 import operator
@@ -325,10 +324,13 @@ def main():
 
     req = "健康管理のための携帯アプリを作りたい"
 
-    sc:Sirochatora = Sirochatora(role_def_conf = "study_role.json")
-    agent = Agent(sc)
-    print(agent.run(req))
+    #sc:Sirochatora = Sirochatora(role_def_conf = "study_role.json")
+    #agent = Agent(sc)
+    #print(agent.run(req))
 
+    sc:Sirochatora = Sirochatora(role_def_conf = "study_role.json")
+    sc.graph_init_simpletalk()
+    print(sc.ask_with_graph("カモミールの効用について教えてください"))
 
 if __name__ == "__main__":
     main()

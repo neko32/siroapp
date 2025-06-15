@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "sirochatora",
+    "streamlit>=1.45.1",
 ]
 
 [tool.uv.sources]
-sirochatora = { path = "../../../../opt/libnekokan/lib/sirochatora-20250605.post1-py3-none-any.whl" }
+sirochatora = { path = "../../../../opt/libnekokan/lib/sirochatora-20250614-py3-none-any.whl" }
