@@ -6,8 +6,10 @@ import streamlit as st
 import asyncio
 from os import environ
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, trim_messages
 
+def memclear(buf_size:int = 30):
+    st.session_state.chat_hist = []
 
 async def main():
 
@@ -16,7 +18,21 @@ async def main():
     environ["LANGCHAIN_PROJECT"] = conf._conf["LANGCHAIN_PROJECT"]
     session_id = "nekonekoneko"
 
+    st.set_page_config(layout = "wide")
+    st.sidebar.header("設定")
+
+    available_models = ["gemma3:4b", "ollama3.2"]
+    available_actors = ["みーこ", "ぴぴん", "とらきち", "しろ", "みけよん"]
+    model_chosen = st.sidebar.selectbox(label = "LLMモデル", index = 0, options = available_models)
+    actor_chosen = st.sidebar.selectbox(label = "ねこちゃん", index = 0, options = available_actors)
+    temperature_as_int = st.sidebar.slider(label = "Temperature", min_value = 0, max_value = 10, value = 3, step = 1)
+    hist_window = st.sidebar.slider(label = "チャットの履歴サイズ", min_value = 1, max_value = 100, value = 30, step = 1)
+
+    print(f"built SC with model {model_chosen}, temperature {temperature_as_int / 10}")
+
     sc:Sirochatora = Sirochatora(
+        model_name = model_chosen,
+        temperature = temperature_as_int / 10,
         is_chat_mode = True, 
         session_id = session_id
     )
@@ -29,22 +45,29 @@ async def main():
     sc.add_system_message(actor.persona_system_message)
     st.title(f"{actor._name}とのお話 [SESSION:{session_id}]")
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    st.session_state.messages = sc._msg_history.get_messages()
+    if "chat_hist" not in st.session_state:
+        st.session_state.chat_hist = []
+    st.session_state.chat_hist = sc._msg_history.get_messages()
+    st.session_state.chat_hist = trim_messages(
+        st.session_state.chat_hist, 
+        token_counter = len,
+        max_tokens = hist_window,
+        strategy = 'last',
+        start_on = "human"
+    )
+    print(f"trimmed messages with max_token = {hist_window} - current size: {len(st.session_state.chat_hist)}")
 
-    for msg in st.session_state.messages:
+    for msg in st.session_state.chat_hist:
         with st.chat_message(msg.type):
             st.write(msg.content)
 
     if ipt := st.chat_input():
         with st.chat_message("human"):
             st.write(ipt)
-        st.session_state.messages.append(HumanMessage(ipt))
+        st.session_state.chat_hist.append(HumanMessage(ipt))
 
-        #while True:
         ai_resp = await sc.query_async(ipt)
-        st.session_state.messages.append(ai_resp)
+        st.session_state.chat_hist.append(ai_resp)
 
         if isinstance(ai_resp.content, str):
             with st.chat_message("ai"):
