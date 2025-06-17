@@ -5,20 +5,38 @@ import streamlit as st
 
 import asyncio
 from os import environ
+from PIL import Image
 
 from langchain_core.messages import AIMessage, HumanMessage, trim_messages
 
 def memclear(buf_size:int = 30):
     st.session_state.chat_hist = []
 
+def customize_ui():
+    # this may not work as expected
+    st.markdown("""
+    <style>
+    .stChatMessageAvatar img {
+        width: 256px !important;
+        height: 256px !important;
+        border-radius: 50% !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 async def main():
 
     conf:ConfJsonLoader = ConfJsonLoader("sirochatora/conf.json")
     environ["LANGSMITH_API_KEY"] = conf._conf["LANGSMITH_API_KEY"]
     environ["LANGCHAIN_PROJECT"] = conf._conf["LANGCHAIN_PROJECT"]
+    avator_image_dir = f"{environ["NEKORC_PATH"]}/siroapp/avator"
     session_id = "nekonekoneko"
 
     st.set_page_config(layout = "wide")
+    customize_ui()
+
+    my_avatar_img = Image.open(f"{avator_image_dir}/choryo.png")
+
     st.sidebar.header("設定")
 
     available_models = ["gemma3:4b", "ollama3.2"]
@@ -40,8 +58,15 @@ async def main():
         name = "みーこ",
         full_name = "猫宮 みーこ",
         persona_id = "meeko",
-        image = "/tmp/meeko.jpg"
+        image = f"{avator_image_dir}/meeko_256x256.png",
     )
+    avator_img = Image.open(actor._image)
+    avator_map = {
+        "human": my_avatar_img,
+        "ai": avator_img
+    }
+
+
     sc.add_system_message(actor.persona_system_message)
     st.title(f"{actor._name}とのお話 [SESSION:{session_id}]")
 
@@ -58,7 +83,7 @@ async def main():
     print(f"trimmed messages with max_token = {hist_window} - current size: {len(st.session_state.chat_hist)}")
 
     for msg in st.session_state.chat_hist:
-        with st.chat_message(msg.type):
+        with st.chat_message(msg.type, avatar = avator_map[msg.type]):
             st.write(msg.content)
 
     if ipt := st.chat_input():
@@ -70,7 +95,7 @@ async def main():
         st.session_state.chat_hist.append(ai_resp)
 
         if isinstance(ai_resp.content, str):
-            with st.chat_message("ai"):
+            with st.chat_message("ai", avatar = avator_img):
                 st.write(ai_resp.content)
 
 
